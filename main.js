@@ -14,9 +14,9 @@ var canvas   = document.getElementById('canvas'),
     height   = canvas.height = MAP.th * TILE,
     player   = { x: 240, y: 20 * 16, dx: MINDX, dy: 0 },
     pipes    = [
-      { top: Math.floor(Math.random() * 8) + 8, x: 30 * TILE },
-      { top: Math.floor(Math.random() * 8) + 8, x: 50 * TILE },
-      { top: Math.floor(Math.random() * 8) + 8, x: 70 * TILE }
+      { top: Math.floor(Math.random() * 8) + 8, x: 30 * TILE, n: 0 },
+      { top: Math.floor(Math.random() * 8) + 8, x: 50 * TILE, n: 1 },
+      { top: Math.floor(Math.random() * 8) + 8, x: 70 * TILE, n: 2 }
     ];
 
 var t2p = function(t) { return t*TILE;             },
@@ -118,8 +118,9 @@ function onkey(ev, key, down) {
 
 function generatePipe() {
   var top = Math.floor(Math.random() * 8) + 8;
-  var x   = pipes[pipes.length - 1].x + 20 * TILE
-  var pipe = { top: top, x: x }
+  var x   = pipes[pipes.length - 1].x + 20 * TILE;
+  var n   = pipes[pipes.length - 1].n + 1;
+  var pipe = { top: top, x: x, n: n }
 
   pipes.push(pipe);
 }
@@ -143,18 +144,29 @@ function collisionDetection() {
       bl = [240, player.y + TILE],
       br = [240 + TILE, player.y + TILE];
 
-  var pipeTop, pipeBottom;
-  pipes.forEach(function(pipe) {
+  for (i = 0; i < pipes.length; i++) {
+    pipe = pipes[i];
+
     var pttl = [pipe.x, 0],
         pttr = [pipe.x + (3 * TILE), 0],
         ptbl = [pipe.x, pipe.top * TILE],
         ptbr = [pipe.x + (3 * TILE), pipe.top * TILE];
 
-    var pbtl = [pipe.x, (pipe.top + 8) * TILE],
-        pbtr = [pipe.x + (3 * TILE), (pipe.top + 8) * TILE],
+    var pbtl = [pipe.x, (pipe.top + 9) * TILE],
+        pbtr = [pipe.x + (3 * TILE), (pipe.top + 9) * TILE],
         pbbl = [pipe.x, MAP.th * TILE],
         pbbr = [pipe.x + (3 * TILE), MAP.th * TILE];
-  });
+
+    if (tl[0] >= pttl[0] && tl[0] <= pttr[0] && tl[1] <= ptbl[1]) return true;
+
+    if (tr[0] >= pttl[0] && tr[0] <= pttr[0] && tr[1] <= ptbl[1]) return true;
+
+    if (bl[0] >= pbtl[0] && bl[0] <= pbtr[0] && bl[1] >= pbtl[1]) return true;
+
+    if (br[0] >= pbtl[0] && br[0] <= pttr[0] && br[1] >= pbtl[1]) return true;
+  }
+
+  return false;
 }
 
 function update(dt) {
@@ -180,7 +192,7 @@ function update(dt) {
     if (pipe.x < 0 - (3 * TILE)) pipes.splice(pipes.indexOf(pipe), 1);
   });
 
-  collisionDetection();
+  if (collisionDetection()) console.log("Colisao!");
 }
 
 frame(); // start the first frame
