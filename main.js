@@ -13,10 +13,11 @@ var canvas   = document.getElementById('canvas'),
     width    = canvas.width  = MAP.tw * TILE,
     height   = canvas.height = MAP.th * TILE,
     player   = { x: 240, y: 20 * 16, dx: MINDX, dy: 0 },
+    score    = 0,
     pipes    = [
-      { top: Math.floor(Math.random() * 8) + 8, x: 30 * TILE, n: 0 },
-      { top: Math.floor(Math.random() * 8) + 8, x: 50 * TILE, n: 1 },
-      { top: Math.floor(Math.random() * 8) + 8, x: 70 * TILE, n: 2 }
+      { top: Math.floor(Math.random() * 8) + 8, x: 30 * TILE, n: 0, scored: false },
+      { top: Math.floor(Math.random() * 8) + 8, x: 50 * TILE, n: 1, scored: false },
+      { top: Math.floor(Math.random() * 8) + 8, x: 70 * TILE, n: 2, scored: false }
     ];
 
 var t2p = function(t) { return t*TILE;             },
@@ -103,6 +104,14 @@ function render(ctx) {
   ctx.fillStyle = COLOR.YELLOW;
   ctx.fillRect(240, player.y, TILE, TILE);
 
+  // render score
+  ctx.font = "100px Arial";
+  ctx.fillStyle = "white";
+  ctx.strokeStyle = "black";
+  ctx.textAlign = "center";
+  ctx.strokeText(score, 80, MAP.th * TILE - 40);
+  ctx.fillText(score, 80, MAP.th * TILE - 40);
+
   renderCollisionPoints();
 }
 
@@ -120,7 +129,7 @@ function generatePipe() {
   var top = Math.floor(Math.random() * 8) + 8;
   var x   = pipes[pipes.length - 1].x + 20 * TILE;
   var n   = pipes[pipes.length - 1].n + 1;
-  var pipe = { top: top, x: x, n: n }
+  var pipe = { top: top, x: x, n: n, scored: false }
 
   pipes.push(pipe);
 }
@@ -157,16 +166,24 @@ function collisionDetection() {
         pbbl = [pipe.x, MAP.th * TILE],
         pbbr = [pipe.x + (3 * TILE), MAP.th * TILE];
 
-    if (tl[0] >= pttl[0] && tl[0] <= pttr[0] && tl[1] <= ptbl[1]) return true;
-
-    if (tr[0] >= pttl[0] && tr[0] <= pttr[0] && tr[1] <= ptbl[1]) return true;
-
-    if (bl[0] >= pbtl[0] && bl[0] <= pbtr[0] && bl[1] >= pbtl[1]) return true;
-
-    if (br[0] >= pbtl[0] && br[0] <= pttr[0] && br[1] >= pbtl[1]) return true;
+    if ((tl[0] >= pttl[0] && tl[0] <= pttr[0] && tl[1] <= ptbl[1]) ||
+        (tr[0] >= pttl[0] && tr[0] <= pttr[0] && tr[1] <= ptbl[1]) ||
+        (bl[0] >= pbtl[0] && bl[0] <= pbtr[0] && bl[1] >= pbtl[1]) ||
+        (br[0] >= pbtl[0] && br[0] <= pttr[0] && br[1] >= pbtl[1])) {
+      pipe.scored = true;
+      return true;
+    }
   }
 
   return false;
+}
+
+function increaseScore() {
+  score ++;
+}
+
+function resetScore() {
+  score = 0;
 }
 
 function update(dt) {
@@ -192,7 +209,15 @@ function update(dt) {
     if (pipe.x < 0 - (3 * TILE)) pipes.splice(pipes.indexOf(pipe), 1);
   });
 
-  if (collisionDetection()) console.log("Colisao!");
+  if (collisionDetection()) resetScore();
+
+  pipes.forEach(function(pipe) {
+    if (!pipe.scored && pipe.x < 240 - (3 * TILE)) {
+      pipe.scored = true;
+      increaseScore();
+    }
+  });
+  
 }
 
 frame(); // start the first frame
