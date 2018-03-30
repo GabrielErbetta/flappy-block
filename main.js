@@ -100,9 +100,13 @@ function render(ctx) {
     }
   });
 
+  renderPipesCollisionPoints();
+
   // render player
   ctx.fillStyle = COLOR.YELLOW;
   ctx.fillRect(240, player.y, TILE, TILE);
+
+  renderPlayerCollisionPoints();
 
   // render score
   ctx.font = "100px Arial";
@@ -111,8 +115,6 @@ function render(ctx) {
   ctx.textAlign = "center";
   ctx.strokeText(score, 80, MAP.th * TILE - 40);
   ctx.fillText(score, 80, MAP.th * TILE - 40);
-
-  renderCollisionPoints();
 }
 
 document.addEventListener('keydown', function(ev) { return onkey(ev, ev.keyCode, true);  }, false);
@@ -134,17 +136,21 @@ function generatePipe() {
   pipes.push(pipe);
 }
 
-function renderCollisionPoints() {
+function renderPlayerCollisionPoints() {
   var tl = [240, player.y],
       tr = [240 + TILE, player.y],
       bl = [240, player.y + TILE],
       br = [240 + TILE, player.y + TILE];
 
   ctx.fillStyle = COLOR.BLACK;
-  ctx.fillRect(tl[0], tl[1], 1, 1);
-  ctx.fillRect(tr[0], tr[1], 1, 1);
-  ctx.fillRect(bl[0], bl[1], 1, 1);
-  ctx.fillRect(br[0], br[1], 1, 1);
+  ctx.strokeRect(tl[0], tl[1], tr[0] - tl[0], bl[1] - tl[1]);
+}
+
+function renderPipesCollisionPoints() {
+  pipes.forEach(function(pipe) {
+    ctx.strokeRect(pipe.x, 0, 3 * TILE, (pipe.top + 1) * TILE);
+    ctx.strokeRect(pipe.x, (pipe.top + 9) * TILE, 3 * TILE, (MAP.th - (pipe.top + 9)) * TILE);
+  });
 }
 
 function collisionDetection() {
@@ -158,8 +164,8 @@ function collisionDetection() {
 
     var pttl = [pipe.x, 0],
         pttr = [pipe.x + (3 * TILE), 0],
-        ptbl = [pipe.x, pipe.top * TILE],
-        ptbr = [pipe.x + (3 * TILE), pipe.top * TILE];
+        ptbl = [pipe.x, (pipe.top + 1) * TILE],
+        ptbr = [pipe.x + (3 * TILE), (pipe.top + 1) * TILE];
 
     var pbtl = [pipe.x, (pipe.top + 9) * TILE],
         pbtr = [pipe.x + (3 * TILE), (pipe.top + 9) * TILE],
