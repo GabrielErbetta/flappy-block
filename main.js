@@ -13,7 +13,8 @@ var canvas   = document.getElementById('canvas'),
     width    = canvas.width  = MAP.tw * TILE,
     height   = canvas.height = MAP.th * TILE,
     player   = { x: 240, y: 20 * 16, dx: MINDX, dy: 0 },
-    score    = 0,
+    score    = null,
+    started  = false,
     pipes    = [
       { top: Math.floor(Math.random() * 8) + 8, x: 30 * TILE, n: 0, scored: false },
       { top: Math.floor(Math.random() * 8) + 8, x: 50 * TILE, n: 1, scored: false },
@@ -23,39 +24,10 @@ var canvas   = document.getElementById('canvas'),
 var t2p = function(t) { return t*TILE;             },
     p2t = function(p) { return Math.floor(p/TILE); };
 
-var KEY    = { UP: 32, SPACE: 38 };
+var KEY    = { UP: 38, SPACE: 32 };
 
 var COLOR  = { BLACK: '#000000', GREEN: '#2CB733', YELLOW: '#FFE83D', BLUE: '#6AD8D3' },
     COLORS = [ COLOR.BLACK, COLOR.GREEN, COLOR.YELLOW, COLOR.BLUE ];
-
-function generateTiles() {
-  var map = [];
-  var top;
-
-  for (i = 0; i < 1000; i++) {
-    map[i] = [];
-    for (j = 0; j < 32; j++) {
-      map[i][j] = 3;
-    }
-  }
-
-  for (i = 40; i < 1000; i += 20) {
-    top = Math.floor(Math.random() * 8) + 8;
-    for (j = 0; j < 32; j++) {
-      if (j <= top || j > top + 8) {
-        map[i-1][j] = 1;
-        map[i][j] = 1;
-        map[i+1][j] = 1;
-      }
-    }
-  }
-
-  return map;
-}
-
-var cells = generateTiles(),
-    cell  = function(x,y)   { return tcell(p2t(x),p2t(y));    },
-    tcell = function(tx,ty) { return cells[tx][ty]; };
 
 function timestamp() {
   if (window.performance && window.performance.now)
@@ -74,51 +46,92 @@ var fps  = 60,
     now, last = timestamp();
 
 function frame() {
-  now = timestamp();
-  dt = dt + Math.min(1, (now - last) / 1000);
-  while(dt > step) {
-    dt = dt - step;
-    update(step);
+  if (started) {
+    now = timestamp();
+    dt = dt + Math.min(1, (now - last) / 1000);
+    while(dt > step) {
+      dt = dt - step;
+      update(step);
+    }
+    last = now;
   }
   render(ctx, dt);
-  last = now;
   requestAnimationFrame(frame, canvas);
 }
 
 function render(ctx) {
-  // render background
-  ctx.fillStyle = COLOR.BLUE;
-  ctx.fillRect(0, 0, MAP.tw * TILE, MAP.th * TILE);
+  if (!started) {
+    ctx.fillStyle = COLOR.BLUE;
+    ctx.fillRect(0, 0, MAP.tw * TILE, MAP.th * TILE);
 
-  // render pipes
-  pipes.forEach(function(pipe) {
-    ctx.fillStyle = COLOR.GREEN;
+    ctx.font = "100px Arial";
+    ctx.fillStyle = "white";
+    ctx.strokeStyle = "black";
+    ctx.textAlign = "center";
+    ctx.fillText("Space to Start", MAP.tw * TILE / 2, MAP.th * TILE / 2);
+    ctx.strokeText("Space to Start", MAP.tw * TILE / 2, MAP.th * TILE / 2);
 
-    for (i = 0; i < MAP.th; i++) {
-      if (i <= pipe.top || i > pipe.top + 8)
-        ctx.fillRect(pipe.x, i * TILE, TILE * 3, TILE);
+    if (score !== null) {
+      ctx.font = "50px Arial";
+      ctx.fillText("Score: " + score, MAP.tw * TILE / 2, MAP.th * TILE / 2 + 100);
+      ctx.strokeText("Score: " + score, MAP.tw * TILE / 2, MAP.th * TILE / 2 + 100);
     }
-  });
+  } else {
+    // render background
+    ctx.fillStyle = COLOR.BLUE;
+    ctx.fillRect(0, 0, MAP.tw * TILE, MAP.th * TILE);
 
-  renderPipesCollisionPoints();
+    // render pipes
+    pipes.forEach(function(pipe) {
+      ctx.fillStyle = COLOR.GREEN;
 
-  // render player
-  ctx.fillStyle = COLOR.YELLOW;
-  ctx.fillRect(240, player.y, TILE, TILE);
+      for (i = 0; i < MAP.th; i++) {
+        if (i <= pipe.top || i > pipe.top + 8)
+          ctx.fillRect(pipe.x, i * TILE, TILE * 3, TILE);
+      }
+    });
 
-  renderPlayerCollisionPoints();
+    renderPipesCollisionPoints();
 
-  // render score
-  ctx.font = "100px Arial";
-  ctx.fillStyle = "white";
-  ctx.strokeStyle = "black";
-  ctx.textAlign = "center";
-  ctx.strokeText(score, 80, MAP.th * TILE - 40);
-  ctx.fillText(score, 80, MAP.th * TILE - 40);
+    // render player
+    ctx.fillStyle = COLOR.YELLOW;
+    ctx.fillRect(240, player.y, TILE, TILE);
+
+    renderPlayerCollisionPoints();
+
+    // render score
+    ctx.font = "100px Arial";
+    ctx.fillStyle = "white";
+    ctx.strokeStyle = "black";
+    ctx.textAlign = "center";
+    ctx.fillText(score, 80, MAP.th * TILE - 40);
+    ctx.strokeText(score, 80, MAP.th * TILE - 40);
+  }
 }
 
-document.addEventListener('keydown', function(ev) { return onkey(ev, ev.keyCode, true);  }, false);
-document.addEventListener('keyup',   function(ev) { return onkey(ev, ev.keyCode, false); }, false);
+function start() {
+  document.addEventListener('keydown', jumpKeyDown, false);
+  document.addEventListener('keyup',   jumpKeyUp, false);
+
+  started = true;
+  score = 0;
+  now = last = timestamp();
+}
+
+function lose() {
+  document.removeEventListener('keydown', jumpKeyDown);
+  document.removeEventListener('keyup',   jumpKeyUp);
+
+  document.addEventListener('keypress', spaceStart, false);
+
+  player   = { x: 240, y: 20 * 16, dx: MINDX, dy: 0 };
+  started  = false;
+  pipes    = [
+    { top: Math.floor(Math.random() * 8) + 8, x: 30 * TILE, n: 0, scored: false },
+    { top: Math.floor(Math.random() * 8) + 8, x: 50 * TILE, n: 1, scored: false },
+    { top: Math.floor(Math.random() * 8) + 8, x: 70 * TILE, n: 2, scored: false }
+  ];
+}
 
 function onkey(ev, key, down) {
   switch(key) {
@@ -184,14 +197,6 @@ function collisionDetection() {
   return false;
 }
 
-function increaseScore() {
-  score ++;
-}
-
-function resetScore() {
-  score = 0;
-}
-
 function update(dt) {
   player.ddx = 0.02;
   player.ddy = GRAVITY;
@@ -215,15 +220,25 @@ function update(dt) {
     if (pipe.x < 0 - (3 * TILE)) pipes.splice(pipes.indexOf(pipe), 1);
   });
 
-  if (collisionDetection()) resetScore();
-
   pipes.forEach(function(pipe) {
     if (!pipe.scored && pipe.x < 240 - (3 * TILE)) {
       pipe.scored = true;
-      increaseScore();
+      score++;
     }
   });
-  
+
+  if (collisionDetection()) lose();
 }
 
+function jumpKeyDown(ev) { return onkey(ev, ev.keyCode, true); }
+function jumpKeyUp(ev) { return onkey(ev, ev.keyCode, false); }
+
+function spaceStart(ev) {
+  if (ev.keyCode == KEY.SPACE) {
+    document.removeEventListener('keypress', spaceStart);
+    start();
+  }
+}
+
+document.addEventListener('keypress', spaceStart, false);
 frame(); // start the first frame
