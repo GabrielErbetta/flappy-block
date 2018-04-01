@@ -161,8 +161,8 @@ function renderPlayerCollisionPoints() {
 
 function renderPipesCollisionPoints() {
   pipes.forEach(function(pipe) {
-    ctx.strokeRect(pipe.x, 0, 3 * TILE, (pipe.top + 1) * TILE);
-    ctx.strokeRect(pipe.x, (pipe.top + 9) * TILE, 3 * TILE, (MAP.th - (pipe.top + 9)) * TILE);
+    ctx.strokeRect(pipe.x, -5, 3 * TILE, (pipe.top + 1) * TILE + 5);
+    ctx.strokeRect(pipe.x, (pipe.top + 9) * TILE, 3 * TILE, (MAP.th - (pipe.top + 9)) * TILE + 5);
   });
 }
 
@@ -197,6 +197,11 @@ function collisionDetection() {
   return false;
 }
 
+function mapBoundDetection() {
+  if (player.y < 0 || player.y > (MAP.th - 1) * TILE) return true;
+  return false;
+}
+
 function update(dt) {
   player.ddx = 0.02;
   player.ddy = GRAVITY;
@@ -208,7 +213,7 @@ function update(dt) {
     player.jumping = false;
   }
 
-  player.y  = bound(Math.floor(player.y  + (dt * player.dy)), 0, (MAP.th - 1) * TILE);
+  player.y  = Math.floor(player.y  + (dt * player.dy));
   player.x  = Math.floor(player.x  + (dt * player.dx));
 
   player.dx = bound(player.dx + player.ddx, MINDX, MAXDX);
@@ -227,7 +232,7 @@ function update(dt) {
     }
   });
 
-  if (collisionDetection()) lose();
+  if (collisionDetection() || mapBoundDetection()) lose();
 }
 
 function jumpKeyDown(ev) { return onkey(ev, ev.keyCode, true); }
